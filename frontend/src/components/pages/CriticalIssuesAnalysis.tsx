@@ -4,9 +4,9 @@ import {
   CardContent,
   CardHeader,
   CardTitle,
-} from "@/app/components/ui/card";
-import { Button } from "@/app/components/ui/button";
-import { Badge } from "@/app/components/ui/badge";
+} from "../ui/card";
+import { Button } from "../ui/button";
+import { Badge } from "../ui/badge";
 import {
   Table,
   TableBody,
@@ -14,7 +14,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/app/components/ui/table";
+} from "../ui/table";
 import {
   LineChart,
   Line,
@@ -36,7 +36,7 @@ import {
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-} from "@/app/components/ui/tooltip";
+} from "../ui/tooltip";
 import {
   TrendingUp,
   TrendingDown,
@@ -55,8 +55,8 @@ import {
   ChevronsRight,
   Info,
 } from "lucide-react";
-import { fetchNVRStatusHistory } from "@/app/services/nvrHistoryService";
-import { NVRStatus } from "@/app/types/nvr";
+import { fetchNVRStatusHistory } from "../../services/nvrHistoryService";
+import { NVRStatus } from "../../types/nvr";
 
 interface CriticalIssue {
   nvrId: string;

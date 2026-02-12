@@ -1,27 +1,27 @@
 import { useState, useRef, useEffect } from "react";
-import { NVRStatus } from "@/app/types/nvr";
+import { NVRStatus } from "../../types/nvr";
 import {
   fetchNVRStatusHistory,
   fetchNVRSnapshots,
   NVRSnapshot,
-} from "@/app/services/nvrHistoryService";
-import { Card, CardContent } from "@/app/components/ui/card";
-import { Badge } from "@/app/components/ui/badge";
-import { Input } from "@/app/components/ui/input";
-import { Button } from "@/app/components/ui/button";
+} from "../../services/nvrHistoryService";
+import { Card, CardContent } from "../ui/card";
+import { Badge } from "../ui/badge";
+import { Input } from "../ui/input";
+import { Button } from "../ui/button";
 import {
   Tabs,
   TabsContent,
   TabsList,
   TabsTrigger,
-} from "@/app/components/ui/tabs";
+} from "../ui/tabs";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/app/components/ui/select";
+} from "../ui/select";
 import {
   ChevronDown,
   ChevronRight,
@@ -73,7 +73,7 @@ import {
   DialogContent,
   DialogTitle,
   DialogDescription,
-} from "@/app/components/ui/dialog";
+} from "../ui/dialog";
 import {
   AnimatedNumber,
   cn,
@@ -88,12 +88,12 @@ import {
   getComponentStyling,
   getComponentIconColor,
   getStatusColor,
-} from "@/app/utils";
+} from "../../utils";
 import {
   StatusIcon,
   ComponentStatusIndicator,
   Pagination,
-} from "@/app/components/shared";
+} from "../shared";
 
 interface NVRStatusPageProps {
   nvrList: NVRStatus[];

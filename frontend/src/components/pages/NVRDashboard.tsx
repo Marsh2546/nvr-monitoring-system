@@ -3,17 +3,17 @@
 // ==========================================
 
 import { useState, useRef, useEffect, useMemo } from "react";
-import { NVRStatus } from "@/app/types/nvr";
-import { fetchNVRStatusHistory } from "@/app/services/postgresqlService";
+import { NVRStatus } from "../../types/nvr";
+import { fetchNVRStatusHistory } from "../../services/postgresqlService";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/app/components/ui/card";
-import { Badge } from "@/app/components/ui/badge";
-import { Button } from "@/app/components/ui/button";
+} from "../ui/card";
+import { Badge } from "../ui/badge";
+import { Button } from "../ui/button";
 import {
   AnimatedNumber,
   cn,
@@ -23,7 +23,7 @@ import {
   hasAttentionIssues,
   hasIssues,
   NVRWithIssues,
-} from "@/app/utils";
+} from "../../utils";
 import {
   Server,
   CheckCircle,

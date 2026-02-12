@@ -21,7 +21,7 @@ import {
   fetchAllNVRHistory,
   query,
   testDatabaseConnection,
-} from "./databaseService.js";
+} from "./databaseService";
 
 // Middleware
 app.use(cors({
@@ -253,6 +253,62 @@ app.post("/api/cleanup-logs", async (req, res) => {
   } catch (error) {
     console.error("Error cleaning up logs:", error);
     res.status(500).json({ error: "Failed to cleanup logs" });
+  }
+});
+
+// Repair requests endpoints
+app.get("/api/repair-requests", async (req, res) => {
+  try {
+    // Fetch real repair requests from database
+    const result = await query(`
+      SELECT 
+        id,
+        'NVR-' || id as ticketNumber,
+        location,
+        district,
+        'Hardware Issue' as issue,
+        'pending' as status,
+        CASE 
+          WHEN EXTRACT(DAY FROM created_at) = EXTRACT(DAY FROM CURRENT_DATE) THEN 'high'
+          WHEN EXTRACT(DAY FROM created_at) BETWEEN EXTRACT(DAY FROM CURRENT_DATE) - 3 AND EXTRACT(DAY FROM CURRENT_DATE) - 1 THEN 'medium'
+          ELSE 'low'
+        END as priority,
+        created_at as reportedDate,
+        created_at as scheduledDate,
+        created_at as completedDate,
+        'System' as reporter
+      FROM repair_requests
+      ORDER BY created_at DESC
+      LIMIT 10
+    `);
+    
+    // Transform database rows to match frontend interface
+    const repairRequests = result.map((row: any) => ({
+      id: row.id.toString(),
+      ticketNumber: row.ticketnumber,
+      location: row.location,
+      district: row.district,
+      issue: row.issue,
+      status: row.status,
+      priority: row.priority,
+      reportedDate: row.reporteddate,
+      scheduledDate: row.scheduleddate,
+      completedDate: row.completeddate,
+      reporter: row.reporter,
+      technicianName: row.technicianname,
+      createdAt: row.createdat,
+      updatedAt: row.updatedat
+    }));
+    
+    res.json({
+      success: true,
+      data: repairRequests,
+      count: repairRequests.length,
+      lastUpdated: new Date().toISOString(),
+    });
+  } catch (error) {
+    console.error("Error fetching repair requests:", error);
+    res.status(500).json({ error: "Failed to fetch repair requests" });
   }
 });
 

@@ -1,18 +1,18 @@
 import { useState, useEffect } from "react";
-import { Button } from "@/app/components/ui/button";
-import { Badge } from "@/app/components/ui/badge";
+import { Button } from "./components/ui/button";
+import { Badge } from "./components/ui/badge";
 import {
   LayoutDashboard,
   ClipboardList,
   RefreshCw,
   AlertCircle,
 } from "lucide-react";
-import { mockNVRData } from "@/app/data/nvrData";
-import { Toaster } from "@/app/components/ui/sonner";
+import { mockNVRData } from "./data/nvrData";
+import { Toaster } from "./components/ui/sonner";
 import { toast } from "sonner";
-import { fetchNVRStatus } from "@/app/services/nvrService";
-import { NVRStatus } from "@/app/types/nvr";
-import { PageRegistry, PageName, PageWrapperProps } from "@/app/components";
+import { fetchNVRStatus } from "./services/nvrService";
+import { NVRStatus } from "./types/nvr";
+import { PageRegistry, PageName, PageWrapperProps } from "./components";
 
 export default function App() {
   const [currentPage, setCurrentPage] = useState<PageName>("dashboard");

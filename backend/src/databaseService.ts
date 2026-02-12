@@ -2,12 +2,16 @@ import { Pool } from "pg";
 
 // Database connection pool
 export const pool = new Pool({
-  host: process.env.DB_HOST || "localhost",
-  port: parseInt(process.env.DB_PORT || "5435"),
-  database: process.env.DB_NAME || "cctv_nvr",
+  host: process.env.DB_HOST || "postgres",
+  port: parseInt(process.env.DB_PORT || "5432"),
+  database: process.env.DB_NAME || "cctv_nvr_monitor",
   user: process.env.DB_USER || "postgres",
   password: process.env.DB_PASSWORD || "password",
   ssl: process.env.DB_SSL === "true" ? { rejectUnauthorized: false } : false,
+  // Add connection timeout and retry settings
+  connectionTimeoutMillis: 10000,
+  idleTimeoutMillis: 30000,
+  max: 20,
 });
 
 // Helper function for database queries

@@ -1,6 +1,6 @@
 import { Wifi, Server, HardDrive, Eye, LogIn } from "lucide-react";
-import { getComponentStatus, getComponentIconColor } from "@/app/utils";
-import { NVRStatus } from "@/app/types/nvr";
+import { getComponentStatus, getComponentIconColor } from "../../utils";
+import { NVRStatus } from "../../types/nvr";
 
 interface ComponentStatusIndicatorProps {
   nvr: NVRStatus;

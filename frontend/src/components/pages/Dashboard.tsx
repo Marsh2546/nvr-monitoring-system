@@ -1,21 +1,20 @@
 import { useEffect, useState } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/app/components/ui/card';
-import { Badge } from '@/app/components/ui/badge';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
+import { Badge } from '../ui/badge';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { AlertCircle, CheckCircle, Clock, Wrench, TrendingUp } from 'lucide-react';
-import { getRepairs } from '@/lib/storage';
-import { RepairRequest, RepairStatus } from '@/types/repair';
-import { cn } from '@/app/utils';
+import { RepairTicket, RepairStatus } from '../../types/repair';
+import { cn } from '../../utils';
 
 const COLORS = {
-  'รอดำเนินการ': '#eab308',
-  'กำลังซ่อม': '#3b82f6',
-  'เสร็จสิ้น': '#22c55e',
-  'ยกเลิก': '#6b7280',
+  pending: '#eab308',
+  'in-progress': '#3b82f6',
+  completed: '#22c55e',
+  cancelled: '#6b7280',
 };
 
 export function Dashboard() {
-  const [requests, setRequests] = useState<RepairRequest[]>([]);
+  const [requests, setRequests] = useState<RepairTicket[]>([]);
   const [stats, setStats] = useState({
     total: 0,
     pending: 0,
@@ -25,20 +24,35 @@ export function Dashboard() {
   });
 
   useEffect(() => {
-    loadData();
+    // Mock data for now - TODO: implement actual data fetching
+    const mockData: RepairTicket[] = [];
+    setRequests(mockData);
+    setStats({
+      total: 0,
+      pending: 0,
+      inProgress: 0,
+      completed: 0,
+      cancelled: 0,
+    });
   }, []);
 
   const loadData = async () => {
     try {
-      const allRequests = await getRepairs();
+      // Fetch real data from backend API
+      const response = await fetch('/api/repair-requests');
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      const result = await response.json();
+      const allRequests: RepairTicket[] = result.data || [];
       setRequests(allRequests);
 
       const newStats = {
         total: allRequests.length,
-        pending: allRequests.filter((r: RepairRequest) => r.status === 'รอดำเนินการ').length,
-        inProgress: allRequests.filter((r: RepairRequest) => r.status === 'กำลังซ่อม').length,
-        completed: allRequests.filter((r: RepairRequest) => r.status === 'เสร็จสิ้น').length,
-        cancelled: allRequests.filter((r: RepairRequest) => r.status === 'ยกเลิก').length,
+        pending: allRequests.filter((r: RepairTicket) => r.status === 'pending').length,
+        inProgress: allRequests.filter((r: RepairTicket) => r.status === 'in-progress').length,
+        completed: allRequests.filter((r: RepairTicket) => r.status === 'completed').length,
+        cancelled: allRequests.filter((r: RepairTicket) => r.status === 'cancelled').length,
       };
       setStats(newStats);
     } catch (error) {
@@ -74,9 +88,9 @@ export function Dashboard() {
     .slice(0, 10);
 
   const priorityData = [
-    { name: 'ปกติ', value: requests.filter(r => r.priority === 'ปกติ').length },
-    { name: 'ด่วน', value: requests.filter(r => r.priority === 'ด่วน').length },
-    { name: 'ด่วนมาก', value: requests.filter(r => r.priority === 'ด่วนมาก').length },
+    { name: 'ปกติ', value: requests.filter(r => r.priority === 'high').length },
+    { name: 'ด่วน', value: requests.filter(r => r.priority === 'medium').length },
+    { name: 'ด่วนมาก', value: requests.filter(r => r.priority === 'low').length },
   ].filter(item => item.value > 0);
 
   return (
@@ -227,25 +241,28 @@ export function Dashboard() {
               <div key={request.id} className="flex items-center justify-between p-4 border rounded-lg">
                 <div className="space-y-1">
                   <div className="flex items-center gap-2">
-                    <span className="font-medium">{request.cctvId}</span>
+                    <span className="font-medium">{request.ticketNumber}</span>
                     <Badge className="text-xs">
                       {request.district}
                     </Badge>
                   </div>
-                  <p className="text-sm text-gray-600">{request.problem}</p>
+                  <p className="text-sm text-gray-600">{request.issue}</p>
                   <p className="text-xs text-gray-500">{request.location}</p>
                 </div>
                 <div className="flex flex-col items-end gap-2">
                   <Badge className={
-                    request.status === 'รอดำเนินการ' ? 'bg-yellow-100 text-yellow-800' :
-                    request.status === 'กำลังซ่อม' ? 'bg-blue-100 text-blue-800' :
-                    request.status === 'เสร็จสิ้น' ? 'bg-green-100 text-green-800' :
+                    request.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                    request.status === 'in-progress' ? 'bg-blue-100 text-blue-800' :
+                    request.status === 'completed' ? 'bg-green-100 text-green-800' :
                     'bg-gray-100 text-gray-800'
                   }>
-                    {request.status}
+                    {request.status === 'pending' ? 'รอดำเนินการ' :
+                     request.status === 'in-progress' ? 'กำลังซ่อม' :
+                     request.status === 'completed' ? 'เสร็จสิ้น' :
+                     request.status}
                   </Badge>
                   <span className="text-xs text-gray-500">
-                    {new Date(request.createdAt).toLocaleDateString('th-TH')}
+                    {new Date(request.reportedDate).toLocaleDateString('th-TH')}
                   </span>
                 </div>
               </div>

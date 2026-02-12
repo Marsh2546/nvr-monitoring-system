@@ -1,14 +1,14 @@
-import { Card, CardContent } from "@/app/components/ui/card";
-import { Button } from "@/app/components/ui/button";
-import { Input } from "@/app/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/app/components/ui/select";
+import { Card, CardContent } from "../ui/card";
+import { Button } from "../ui/button";
+import { Input } from "../ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
 import { 
   ChevronsLeft, 
   ChevronLeft, 
   ChevronRight, 
   ChevronsRight 
 } from "lucide-react";
-import { PaginationProps } from "@/app/types/common";
+import { PaginationProps } from "../../types/common";
 
 interface Props extends PaginationProps {
   label?: string;

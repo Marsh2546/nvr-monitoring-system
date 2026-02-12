@@ -1,130 +1,137 @@
 # CCTV NVR Monitoring System
 
-A comprehensive CCTV NVR monitoring solution with separated frontend and backend architecture, built with modern web technologies and containerized for easy deployment.
+ระบบตรวจสอบสถานะการ CCTV NVR ที่พัฒนาด้วยสถาปัตยกระบบใหม่ แยกส่วน Frontend และ Backend พร้อมการใช้งาน Docker แบบเต็มระบบ
 
-## Quick Start
+## เริ่มต้นใช้งาน
 
-### Prerequisites
+### สิ่งที่ต้องเตรียม
 - Docker & Docker Compose
-- Node.js 18+ (for local development)
+- Node.js 18+ (สำหรับ development ในเครื่อง)
 - Git
 
-### One-Command Setup
+### เริ่มต้นด้วยคำสั่งเดียว
 ```bash
-# Clone and setup
+# Clone และ setup
 git clone <repository-url>
 cd .nvr-monitoring
 make setup
 ```
 
-### Manual Setup
+### ติดตั้งแบบ manual
 ```bash
-# 1. Create environment file
+# 1. สร้าง environment file
 cp config/.env.development .env
 
-# 2. Install dependencies
-cd cctv-nvr-monitor-frontend && npm install
-cd ../cctv-nvr-monitor-backend && npm install
+# 2. ติดตั้ง dependencies
+cd frontend && npm install
+cd ../backend && npm install
 
-# 3. Start development
+# 3. เริ่ม development
 make dev
 ```
 
-## Available Commands
+## คำสั่งที่ใช้ได้
 
 ```bash
-make help              # Show all available commands
-make setup             # Initialize project environment
-make dev               # Start development environment
-make run               # Run services in background
+make help              # แสดงคำสั่งทั้งหมด
+make setup             # เตรียมสภาพแวดล้อมการทำงาน
+make dev               # เริ่มสภาพแวดล้อมการพัฒนา
+make run               # รัน services ใน background
 make build             # Build Docker images
-make deploy            # Deploy to production
-make health            # Check system health
-make logs              # View service logs
-make status            # Show service status
-make backup            # Backup database
-make clean             # Clean up resources
+make deploy            # Deploy ไปยัง production
+make health            # ตรวจสอบสถานะระบบ
+make logs              # ดู logs ของ services
+make status            # แสดงสถานะ services
+make backup            # Backup ฐานข้อมูล
+make clean             # ลบ resources ที่ไม่ใช้
 ```
 
-## Architecture
+## สถาปัตยกระบบ
 
 ### Frontend (React + Vite)
-- **Technology**: React 18, TypeScript, Vite
+- **เทคโนโลยี**: React 18, TypeScript, Vite
 - **UI Framework**: Material-UI, Tailwind CSS
 - **State Management**: React Hooks
 - **Build Tool**: Vite
-- **Port**: 3000 (prod) / 5173 (dev)
+- **Port**: 3000 (production) / 5173 (development)
 
 ### Backend (Node.js + Express)
-- **Technology**: Node.js, Express, TypeScript
-- **Database**: PostgreSQL
+- **เทคโนโลยี**: Node.js, Express, TypeScript
+- **ฐานข้อมูล**: PostgreSQL
 - **API**: RESTful endpoints
-- **Authentication**: JWT (future)
+- **Authentication**: JWT (อนาคต)
 - **Port**: 3001
 
 ### Database (PostgreSQL)
-- **Version**: PostgreSQL 15
-- **Schema**: Optimized for NVR monitoring
-- **Backup**: Automated with scripts
+- **เวอร์ชัน**: PostgreSQL 15
+- **โครงสร้าง**: ปรับแต่งสำหรับการตรวจสอบ NVR
+- **Backup**: ทำงานอัตโนมัติ
 - **Port**: 5432
 
-## Project Structure
+## โครงสร้างโปรเจค
 
 ```
-.nvr-monitoring/
-├── config/              # Configuration files
-├── scripts/             # Utility scripts
-├── docs/                # Documentation
-├── deploy/              # Deployment configs
-├── cctv-nvr-monitor-frontend/  # React app
-└── cctv-nvr-monitor-backend/   # Node.js API
+nvr-monitoring/
+├── backend/              # API หลัง
+├── frontend/             # React application
+├── docker/               # ค่าย Docker
+│   ├── docker-compose.yml
+│   └── nginx.conf
+├── config/               # ตั้งค่าต่างๆ
+├── scripts/              # scripts ช่วยเหลือ
+├── docs/                 # เอกสาร
+├── deploy/               # ค่ายสำหรับ deployment
+├── .env.example          # template สำหรับ environment
+├── .gitignore            # กฎการ ignore สำหรับ Git
+├── Makefile              # คำสั่ง build และ deployment
+└── README.md             # เอกสารหลัก
 ```
 
-## Access URLs
+## URL สำหรับเข้าใช้งาน
 
-| Environment | Frontend | Backend API | Database |
+| สภาพแวดล้อม | Frontend | Backend API | Database |
 |-------------|-----------|-------------|-----------|
 | Development | http://localhost:5173 | http://localhost:3001 | localhost:5432 |
 | Production | http://localhost:80 | http://localhost:3001 | localhost:5432 |
 
-## Configuration
+## การใช้ Docker
+
+### Development (พัฒนา)
+```bash
+make dev               # เริ่มพร้อม hot reload
+make dev-detach       # เริ่มใน background
+```
+
+### Production (ใช้จริง)
+```bash
+make deploy            # Deployment ไป production ทั้งหมด
+make run-prod         # รัน production services
+```
+
+## การตั้งค่า
 
 ### Environment Variables
-Copy the appropriate template and update values:
+คัดลอก template ที่เหมาะสมและอัพเดตค่า:
 - Development: `config/.env.development`
 - Production: `config/.env.production`
 
-### Key Settings
+### ค่าที่สำคัญ
 - `VITE_API_URL`: Backend API endpoint
 - `DATABASE_URL`: PostgreSQL connection string
-- `FRONTEND_URL`: Frontend URL for CORS
+- `FRONTEND_URL`: Frontend URL สำหรับ CORS
 
-## Docker Deployment
+## การตรวจสอบและบำรุงรักษา
 
-### Development
+### การตรวจสอบสถานะ
 ```bash
-make dev               # Start with hot reload
-make dev-detach       # Start in background
+make health            # ตรวจสอบทุก services
+curl http://localhost:3001/health  # ตรวจสอบ backend
 ```
 
-### Production
+### Backup และ Restore
 ```bash
-make deploy            # Full production deployment
-make run-prod         # Run production services
-```
-
-## Monitoring & Maintenance
-
-### Health Checks
-```bash
-make health            # Check all services
-curl http://localhost:3001/health  # Backend health
-```
-
-### Backup & Restore
-```bash
-make backup           # Create database backup
-make restore FILE=backup.sql  # Restore from backup
+make backup           # สร้าง backup ฐานข้อมูล
+make restore FILE=backup.sql  # กู้คืนจาก backup
 ```
 
 ### Logs
@@ -133,98 +140,98 @@ make logs              # Development logs
 make logs-prod         # Production logs
 ```
 
-## Development Workflow
+## ขั้นตอนการพัฒนา
 
-### 1. Feature Development
+### 1. การพัฒนาฟีเจอร์
 ```bash
-# Start development
+# เริ่ม development
 make dev
 
-# Make changes to code
-# Frontend: cctv-nvr-monitor-frontend/
-# Backend: cctv-nvr-monitor-backend/
+# แก้ไขโค้ด
+# Frontend: frontend/
+# Backend: backend/
 
-# Services auto-reload
+# Services จะรีโหลดอัตโนมัติ
 ```
 
-### 2. Testing
+### 2. การทดสอบ
 ```bash
-make test             # Run all tests
-cd cctv-nvr-monitor-frontend && npm test
-cd cctv-nvr-monitor-backend && npm test
+make test             # รัน tests ทั้งหมด
+cd frontend && npm test
+cd backend && npm test
 ```
 
-### 3. Building
+### 3. การ Build
 ```bash
 make build            # Build images
 make build-prod       # Build production images
 ```
 
-## Troubleshooting
+## การแก้ไขปัญหา
 
-### Common Issues
+### ปัญหาที่พบบ่อย
 
-**Port Conflicts**
+**Port ชนกัน**
 ```bash
-# Check what's using ports
+# ตรวจสอบว่า port ใช้อยู่
 netstat -tulpn | grep :3000
 netstat -tulpn | grep :3001
 
-# Kill processes if needed
+# ฆ่า process ถ้าจำเป็น
 sudo kill -9 <PID>
 ```
 
-**Docker Issues**
+**ปัญหา Docker**
 ```bash
-# Reset Docker
+# รีเซ็ต Docker
 make clean
 docker system prune -a
 ```
 
-**Database Connection**
+**การเชื่อมต่อ Database**
 ```bash
-# Check database logs
+# ตรวจสอบ database logs
 docker-compose logs postgres
 
-# Test connection
+# ทดสอบการเชื่อมต่อ
 docker-compose exec postgres psql -U postgres -d cctv_nvr_monitor
 ```
 
-### Recovery Commands
+### คำสั่งกู้คืน
 ```bash
-# Complete reset
+# รีเซ็ตทั้งหมด
 make clean && make setup
 
-# Restart services
+# รีสตาร์ท services
 make stop && make run
 ```
 
-## Documentation
+## เอกสารอ้างอิง
 
-- [Project Structure](docs/PROJECT_STRUCTURE.md)
-- [API Documentation](docs/API.md)
-- [Deployment Guide](docs/DEPLOYMENT.md)
-- [Frontend Docs](cctv-nvr-monitor-frontend/README.md)
-- [Backend Docs](cctv-nvr-monitor-backend/README.md)
+- [โครงสร้างโปรเจค](docs/PROJECT_STRUCTURE.md)
+- [เอกสาร API](docs/API.md)
+- [คู่มือการ Deploy](docs/DEPLOYMENT.md)
+- [เอกสาร Frontend](frontend/README.md)
+- [เอกสาร Backend](backend/README.md)
 
-## Contributing
+## การมีส่วนร่วม
 
-1. Fork the repository
-2. Create feature branch
-3. Make changes with tests
-4. Submit pull request
+1. Fork repository
+2. สร้าง feature branch
+3. แก้ไขโค้ดพร้อม tests
+4. ส่ง pull request
 
-## License
+## ลิขสิทธิ์
 
-[Add your license information here]
+[เพิ่มข้อมูลลิขสิทธิ์ที่นี่]
 
-## Support
+## การสนับสนุน
 
-For issues and questions:
-- Check documentation in `docs/`
-- Review troubleshooting section
-- Create issue in repository
+สำหรับปัญหาและคำถาม:
+- ตรวจสอบเอกสารใน `docs/`
+- อ่านส่วนการแก้ไขปัญหา
+- สร้าง issue ใน repository
 
 ---
 
-**Built with ❤️ for modern CCTV monitoring**
+**พัฒนาด้วย ❤️ สำหรับระบบตรวจสอบ CCTV สมัยใหม่**

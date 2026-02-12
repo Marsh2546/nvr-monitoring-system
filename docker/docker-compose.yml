@@ -13,14 +13,19 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./cctv-nvr-monitor-backend/database/init:/docker-entrypoint-initdb.d
+      - ../backend/database/init:/docker-entrypoint-initdb.d
     networks:
       - cctv-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   # Backend Service
   backend:
     build:
-      context: ./cctv-nvr-monitor-backend
+      context: ../backend
       dockerfile: Dockerfile
     container_name: cctv-nvr-backend
     environment:
@@ -43,7 +48,7 @@ services:
   # Frontend Service
   frontend:
     build:
-      context: ./cctv-nvr-monitor-frontend
+      context: ../frontend
       dockerfile: Dockerfile
     container_name: cctv-nvr-frontend
     ports:

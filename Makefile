@@ -4,9 +4,9 @@
 .DEFAULT_GOAL := help
 
 # Variables
-COMPOSE_FILE_DEV := config/docker-compose.separated.yml
+COMPOSE_FILE_DEV := docker/docker-compose.yml
 COMPOSE_FILE_PROD := config/docker-compose.production.yml
-ENV_DEV := config/.env.development
+ENV_DEV := .env.example
 ENV_PROD := config/.env.production
 
 # Help
@@ -27,8 +27,8 @@ setup: ## Initialize the project environment
 		echo "ℹ️  .env already exists"; \
 	fi
 	@echo "📦 Installing dependencies..."
-	@cd cctv-nvr-monitor-frontend && npm install
-	@cd cctv-nvr-monitor-backend && npm install
+	@cd frontend && npm install
+	@cd ../backend && npm install
 	@echo "✅ Setup complete!"
 
 # Development
@@ -45,18 +45,18 @@ build: build-frontend build-backend ## Build all Docker images
 
 build-frontend: ## Build frontend Docker image
 	@echo "📦 Building frontend..."
-	docker build -t cctv-nvr-frontend:latest ./cctv-nvr-monitor-frontend
+	docker build -t cctv-nvr-frontend:latest ./frontend
 	@echo "✅ Frontend built successfully"
 
 build-backend: ## Build backend Docker image
 	@echo "📦 Building backend..."
-	docker build -t cctv-nvr-backend:latest ./cctv-nvr-monitor-backend
+	docker build -t cctv-nvr-backend:latest ./backend
 	@echo "✅ Backend built successfully"
 
 build-prod: ## Build production images
 	@echo "🏭 Building production images..."
-	docker build -t cctv-nvr-frontend:prod --target production ./cctv-nvr-monitor-frontend
-	docker build -t cctv-nvr-backend:prod --target production ./cctv-nvr-monitor-backend
+	docker build -t cctv-nvr-frontend:prod --target production ./frontend
+	docker build -t cctv-nvr-backend:prod --target production ./backend
 	@echo "✅ Production images built"
 
 # Run
@@ -96,8 +96,8 @@ status: ## Show status of all services
 # Test
 test: ## Run tests
 	@echo "🧪 Running tests..."
-	@cd cctv-nvr-monitor-frontend && npm test
-	@cd cctv-nvr-monitor-backend && npm test
+	@cd frontend && npm test
+	@cd ../backend && npm test
 
 # Clean
 clean: ## Clean up Docker resources

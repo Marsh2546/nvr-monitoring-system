@@ -1,4 +1,4 @@
-export type RepairStatus = 'pending' | 'in-progress' | 'completed';
+export type RepairStatus = 'pending' | 'in-progress' | 'completed' | 'cancelled';
 export type Priority = 'high' | 'medium' | 'low';
 
 export interface RepairTicket {

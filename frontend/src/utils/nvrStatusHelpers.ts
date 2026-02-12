@@ -1,4 +1,4 @@
-import { NVRStatus } from "@/app/types/nvr";
+import { NVRStatus } from "../types/nvr";
 
 export interface EffectiveStatus {
   onu: boolean;

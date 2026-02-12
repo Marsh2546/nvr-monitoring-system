@@ -1,5 +1,5 @@
 import { CheckCircle, XCircle } from "lucide-react";
-import { cn } from "@/app/utils";
+import { cn } from "../../utils";
 
 interface StatusIconProps {
   status: boolean;
