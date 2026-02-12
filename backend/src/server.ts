@@ -146,12 +146,26 @@ app.get("/api/snapshots", async (req, res) => {
 // Get snapshot logs
 app.get("/api/snapshot-logs", async (req, res) => {
   try {
-    const { cameraId, limit = 50 } = req.query;
-    const logs = await fetchSnapshotLogs(
-      cameraId ? Number(cameraId) : undefined,
-      Number(limit),
-    );
-    res.json(logs);
+    const { cameraName, limit = 50 } = req.query;
+    
+    let query = `
+      SELECT camera_name, nvr_ip, nvr_name, snapshot_status, comment, recorded_at, created_at
+      FROM nvr_snapshot_history
+      WHERE snapshot_status IN ('SCHEDULED', 'TRIGGERED', 'FAILED')
+    `;
+    const params: any[] = [];
+
+    if (cameraName) {
+      query += ` AND camera_name = $1`;
+      params.push(cameraName);
+    }
+
+    query += ` ORDER BY created_at DESC LIMIT $${params.length + 1}`;
+    params.push(Number(limit));
+
+    const result = await pool.query(query, params);
+    
+    res.json(result.rows);
   } catch (error) {
     console.error("Error fetching snapshot logs:", error);
     res.status(500).json({ error: "Failed to fetch snapshot logs" });
@@ -161,42 +175,39 @@ app.get("/api/snapshot-logs", async (req, res) => {
 // Manual snapshot trigger endpoint
 app.post("/api/trigger-snapshots", async (req, res) => {
   try {
-    const { cameraIds } = req.body;
+    const { cameraNames } = req.body;
 
-    // Get cameras to snapshot
+    // Get unique cameras from nvr_snapshot_history
     let query = `
-      SELECT c.id, c.camera_name, c.camera_channel, ns.nvr_ip, ns.nvr_port, ns.username, ns.password
-      FROM cameras c
-      JOIN nvr_stations ns ON c.nvr_station_id = ns.id
-      WHERE c.status = 'active' AND ns.status = 'active'
+      SELECT DISTINCT camera_name, nvr_ip, nvr_name
+      FROM nvr_snapshot_history
+      WHERE snapshot_status = 'TRUE'
     `;
     const params: any[] = [];
 
-    if (cameraIds && cameraIds.length > 0) {
-      query += ` AND c.id = ANY($1)`;
-      params.push(cameraIds);
+    if (cameraNames && cameraNames.length > 0) {
+      query += ` AND camera_name = ANY($1)`;
+      params.push(cameraNames);
     }
 
     const result = await pool.query(query, params);
     const cameras = result.rows;
 
-    // Log snapshot attempts
+    // Log snapshot attempts (insert into nvr_snapshot_history)
     for (const camera of cameras) {
-      await pool.query(
-        "INSERT INTO snapshot_logs (camera_id, snapshot_status, snapshot_time) VALUES ($1, $2, $3)",
-        [camera.id, "triggered", new Date()],
-      );
+      await pool.query(`
+        INSERT INTO nvr_snapshot_history (camera_name, nvr_ip, nvr_name, snapshot_status, comment, recorded_at, created_at)
+        VALUES ($1, $2, $3, 'TRIGGERED', 'Manual trigger via API', NOW(), NOW())
+      `, [camera.camera_name, camera.nvr_ip, camera.nvr_name]);
 
-      // Here you would add actual snapshot capture logic
-      // For now, we'll just simulate it
       console.log(
-        `Triggering snapshot for camera: ${camera.camera_name} (${camera.nvr_ip}:${camera.nvr_port})`,
+        `Triggered snapshot for camera: ${camera.camera_name} (${camera.nvr_ip})`,
       );
     }
 
     res.json({
       message: `Triggered snapshots for ${cameras.length} cameras`,
-      cameras: cameras.map((c) => ({ id: c.id, name: c.camera_name })),
+      cameras: cameras.map((c) => ({ name: c.camera_name, nvr: c.nvr_name })),
     });
   } catch (error) {
     console.error("Error triggering snapshots:", error);
@@ -207,23 +218,19 @@ app.post("/api/trigger-snapshots", async (req, res) => {
 // Log snapshots endpoint (for cron job or external calls)
 app.post("/api/log-snapshots", async (req, res) => {
   try {
-    // This endpoint mimics the Supabase function for compatibility
+    // Get unique cameras from nvr_snapshot_history
     const result = await pool.query(`
-      SELECT 
-        c.id as camera_id,
-        c.camera_name,
-        ns.nvr_ip,
-        ns.nvr_name
-      FROM cameras c
-      JOIN nvr_stations ns ON c.nvr_station_id = ns.id
-      WHERE c.status = 'active' AND ns.status = 'active'
+      SELECT DISTINCT camera_name, nvr_ip, nvr_name
+      FROM nvr_snapshot_history
+      WHERE snapshot_status = 'TRUE'
     `);
 
+    // Log scheduled snapshot attempts
     for (const camera of result.rows) {
-      await pool.query(
-        "INSERT INTO snapshot_logs (camera_id, snapshot_status, snapshot_time) VALUES ($1, $2, $3)",
-        [camera.camera_id, "scheduled", new Date()],
-      );
+      await pool.query(`
+        INSERT INTO nvr_snapshot_history (camera_name, nvr_ip, nvr_name, snapshot_status, comment, recorded_at, created_at)
+        VALUES ($1, $2, $3, 'SCHEDULED', 'Scheduled snapshot via cron', NOW(), NOW())
+      `, [camera.camera_name, camera.nvr_ip, camera.nvr_name]);
     }
 
     res.json({
@@ -239,16 +246,22 @@ app.post("/api/log-snapshots", async (req, res) => {
 // Cleanup old logs endpoint (for cron job)
 app.post("/api/cleanup-logs", async (req, res) => {
   try {
+    // Delete all entries older than 1 year (including TRUE status)
+    // Then start fresh collection from current date
     const result = await pool.query(`
-      DELETE FROM snapshot_logs 
-      WHERE created_at < NOW() - INTERVAL '30 days'
+      DELETE FROM nvr_snapshot_history 
+      WHERE created_at < NOW() - INTERVAL '1 year'
     `);
 
-    console.log(`Cleaned up ${result.rowCount} old log entries`);
+    console.log(`Cleaned up ${result.rowCount} old entries (older than 1 year)`);
+    console.log(`Starting fresh data collection from current date`);
 
     res.json({
-      message: `Cleaned up ${result.rowCount} old log entries`,
+      message: `Cleaned up ${result.rowCount} old entries (older than 1 year)`,
       timestamp: new Date().toISOString(),
+      schedule: "Runs every 7:00 AM",
+      retention: "Keep 1 year, then delete and restart collection",
+      note: "All data (including TRUE status) deleted after 1 year to start fresh"
     });
   } catch (error) {
     console.error("Error cleaning up logs:", error);
@@ -256,55 +269,55 @@ app.post("/api/cleanup-logs", async (req, res) => {
   }
 });
 
-// Repair requests endpoints
-app.get("/api/repair-requests", async (req, res) => {
+// NVR status endpoints
+app.get("/api/nvr-status", async (req, res) => {
   try {
-    // Fetch real repair requests from database
     const result = await query(`
       SELECT 
         id,
-        'NVR-' || id as ticketNumber,
-        location,
+        nvr_id,
+        nvr_name,
         district,
-        'Hardware Issue' as issue,
-        'pending' as status,
-        CASE 
-          WHEN EXTRACT(DAY FROM created_at) = EXTRACT(DAY FROM CURRENT_DATE) THEN 'high'
-          WHEN EXTRACT(DAY FROM created_at) BETWEEN EXTRACT(DAY FROM CURRENT_DATE) - 3 AND EXTRACT(DAY FROM CURRENT_DATE) - 1 THEN 'medium'
-          ELSE 'low'
-        END as priority,
-        created_at as reportedDate,
-        created_at as scheduledDate,
-        created_at as completedDate,
-        'System' as reporter
-      FROM repair_requests
-      ORDER BY created_at DESC
-      LIMIT 10
+        location,
+        onu_ip,
+        ping_onu,
+        nvr_ip,
+        ping_nvr,
+        hdd_status,
+        normal_view,
+        check_login,
+        camera_count,
+        recorded_at
+      FROM nvr_status_history
+      ORDER BY recorded_at DESC
+      LIMIT 100
     `);
     
-    // Transform database rows to match frontend interface
-    const repairRequests = result.map((row: any) => ({
-      id: row.id.toString(),
-      ticketNumber: row.ticketnumber,
-      location: row.location,
-      district: row.district,
-      issue: row.issue,
-      status: row.status,
-      priority: row.priority,
-      reportedDate: row.reporteddate,
-      scheduledDate: row.scheduleddate,
-      completedDate: row.completeddate,
-      reporter: row.reporter,
-      technicianName: row.technicianname,
-      createdAt: row.createdat,
-      updatedAt: row.updatedat
-    }));
+    res.json({
+      success: true,
+      data: result,
+      count: result.length,
+      lastUpdated: new Date().toISOString(),
+    });
+  } catch (error) {
+    console.error("Error fetching NVR status:", error);
+    res.status(500).json({ error: "Failed to fetch NVR status" });
+  }
+});
+
+// Repair requests endpoints
+app.get("/api/repair-requests", async (req, res) => {
+  try {
+    // Since repair_requests table was removed, return empty data with proper structure
+    // This endpoint can be enhanced later to use data from nvr_status_history for issues
+    const repairRequests: any[] = [];
     
     res.json({
       success: true,
       data: repairRequests,
-      count: repairRequests.length,
+      count: 0,
       lastUpdated: new Date().toISOString(),
+      message: "Repair requests table not available. This endpoint returns empty data."
     });
   } catch (error) {
     console.error("Error fetching repair requests:", error);

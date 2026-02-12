@@ -38,13 +38,21 @@ export function Dashboard() {
 
   const loadData = async () => {
     try {
-      // Fetch real data from backend API
-      const response = await fetch('/api/repair-requests');
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+      // Fetch real NVR status data from backend API
+      const nvrResponse = await fetch('/api/nvr-status');
+      if (!nvrResponse.ok) {
+        throw new Error(`HTTP error! status: ${nvrResponse.status}`);
       }
-      const result = await response.json();
-      const allRequests: RepairTicket[] = result.data || [];
+      const nvrResult = await nvrResponse.json();
+      const nvrData = nvrResult.data || [];
+
+      // Fetch real repair requests from backend API
+      const repairResponse = await fetch('/api/repair-requests');
+      if (!repairResponse.ok) {
+        throw new Error(`HTTP error! status: ${repairResponse.status}`);
+      }
+      const repairResult = await repairResponse.json();
+      const allRequests: RepairTicket[] = repairResult.data || [];
       setRequests(allRequests);
 
       const newStats = {
