@@ -1,0 +1,84 @@
+version: '3.8'
+
+services:
+  # Frontend Service (Production)
+  frontend:
+    build:
+      context: ./cctv-nvr-monitor-frontend
+      dockerfile: Dockerfile
+      target: production
+    image: cctv-nvr-frontend:prod
+    container_name: cctv-nvr-frontend-prod
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      - NODE_ENV=production
+    volumes:
+      - ./config/nginx.prod.conf:/etc/nginx/nginx.conf:ro
+    restart: unless-stopped
+    networks:
+      - nvr-network
+
+  # Backend Service (Production)
+  backend:
+    build:
+      context: ./cctv-nvr-monitor-backend
+      dockerfile: Dockerfile
+      target: production
+    image: cctv-nvr-backend:prod
+    container_name: cctv-nvr-backend-prod
+    ports:
+      - "3001:3001"
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=${DATABASE_URL}
+      - FRONTEND_URL=${FRONTEND_URL}
+    volumes:
+      - snapshots_data:/app/snapshots
+      - ./logs:/app/logs
+    restart: unless-stopped
+    depends_on:
+      - postgres
+    networks:
+      - nvr-network
+
+  # PostgreSQL Database (Production)
+  postgres:
+    image: postgres:15-alpine
+    container_name: cctv-nvr-postgres-prod
+    environment:
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database/init:/docker-entrypoint-initdb.d:ro
+      - ./backups:/backups
+    restart: unless-stopped
+    networks:
+      - nvr-network
+
+  # Redis (Optional - for caching)
+  redis:
+    image: redis:7-alpine
+    container_name: cctv-nvr-redis-prod
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+    networks:
+      - nvr-network
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+  snapshots_data:
+    driver: local
+
+networks:
+  nvr-network:
+    driver: bridge

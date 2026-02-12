@@ -1,0 +1,62 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: cctv-nvr-postgres
+    environment:
+      POSTGRES_DB: cctv_nvr_monitor
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./cctv-nvr-monitor-backend/database/init:/docker-entrypoint-initdb.d
+    networks:
+      - cctv-network
+
+  # Backend Service
+  backend:
+    build:
+      context: ./cctv-nvr-monitor-backend
+      dockerfile: Dockerfile
+    container_name: cctv-nvr-backend
+    environment:
+      DATABASE_URL: postgresql://postgres:password@postgres:5432/cctv_nvr_monitor
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: cctv_nvr_monitor
+      DB_USER: postgres
+      DB_PASSWORD: password
+      FRONTEND_URL: http://localhost:3000
+    ports:
+      - "3001:3001"
+    volumes:
+      - snapshots_data:/app/snapshots
+    depends_on:
+      - postgres
+    networks:
+      - cctv-network
+
+  # Frontend Service
+  frontend:
+    build:
+      context: ./cctv-nvr-monitor-frontend
+      dockerfile: Dockerfile
+    container_name: cctv-nvr-frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+    networks:
+      - cctv-network
+
+volumes:
+  postgres_data:
+  snapshots_data:
+
+networks:
+  cctv-network:
+    driver: bridge
