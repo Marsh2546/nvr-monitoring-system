@@ -73,9 +73,9 @@ export function NVRDashboard({ onPageChange }: NVRDashboardProps) {
 
         // Get latest date range (fetch most recent data)
         const now = new Date();
-        // Go back 7 days to ensure we get the latest data
-        const startDate = new Date(now.getTime() - (7 * 24 * 60 * 60 * 1000));
-        const endDate = new Date(now.getTime() + (24 * 60 * 60 * 1000)); // Add 1 day buffer
+        // Focus on 2026-02-12 where we know there are issues
+        const startDate = new Date("2026-02-12T00:00:00.000Z");
+        const endDate = new Date("2026-02-12T23:59:59.999Z");
 
         const dataPromise = fetchNVRStatusHistory(
           startDate.toISOString(),
@@ -140,6 +140,29 @@ export function NVRDashboard({ onPageChange }: NVRDashboardProps) {
           date_updated: nvr?.date_updated || "",
         };
 
+        // Debug: แสดงข้อมูลตัวอย่าง
+        if (nvrList.indexOf(nvr) === 0) {
+          console.log("🔍 Sample NVR data:", safeNvr);
+        }
+
+        // Debug: หา NVR ที่มีปัญหา
+        if (safeNvr.check_login === false) {
+          console.log("🔍 Found NVR with login problem:", safeNvr.id);
+        }
+        if (safeNvr.ping_nvr === false) {
+          console.log("🔍 Found NVR with NVR down:", safeNvr.id);
+        }
+
+        // Debug: ตรวจสอบข้อมูลที่ได้รับ
+        console.log("🔍 Processing NVR:", {
+          id: safeNvr.id,
+          ping_onu: safeNvr.ping_onu,
+          ping_nvr: safeNvr.ping_nvr,
+          hdd_status: safeNvr.hdd_status,
+          normal_view: safeNvr.normal_view,
+          check_login: safeNvr.check_login,
+        });
+
         const issueStatus = getIssueStatus(safeNvr);
         const status = calculateEffectiveStatus(safeNvr);
         const issues: string[] = [];
@@ -151,20 +174,29 @@ export function NVRDashboard({ onPageChange }: NVRDashboardProps) {
         if (issueStatus === "view") issues.push("View Down");
         if (issueStatus === "login") issues.push("Login Failure");
 
+        const hasCritical = hasCriticalIssues(safeNvr);
+        const hasAttention = hasAttentionIssues(safeNvr);
+        const hasAnyIssues = hasIssues(safeNvr);
+
         return {
           ...safeNvr,
-          hasIssues: hasIssues(safeNvr),
+          hasIssues: hasAnyIssues,
           issueCount: issues.length,
           issues: issues,
-          hasCriticalIssues: hasCriticalIssues(safeNvr),
-          hasAttentionIssues: hasAttentionIssues(safeNvr),
+          hasCriticalIssues: hasCritical,
+          hasAttentionIssues: hasAttention,
         };
       }),
     [nvrList],
   );
 
+  // console.log("🔍 nvrWithIssues length:", nvrWithIssues.length);
+  // console.log("🔍 Sample nvrWithIssues:", nvrWithIssues[0]);
+
   // ✅ useMemo: คำนวณ statistics
   const stats = useMemo(() => {
+    console.log("🔍 Calculating stats from nvrWithIssues:", nvrWithIssues.length);
+    
     const totalNVR = nvrWithIssues.length;
     const normalNVR = nvrWithIssues.filter((nvr) => !nvr.hasIssues).length;
     const problemNVR = nvrWithIssues.filter((nvr) => nvr.hasIssues).length;
@@ -172,6 +204,15 @@ export function NVRDashboard({ onPageChange }: NVRDashboardProps) {
     const attentionNVRs = nvrWithIssues.filter(
       (nvr) => nvr.hasAttentionIssues && !nvr.hasCriticalIssues,
     );
+
+    console.log("🔍 Stats calculated:", {
+      totalNVR,
+      normalNVR,
+      problemNVR,
+      criticalCount: criticalNVRs.length,
+      attentionCount: attentionNVRs.length,
+    });
+
 
     // Count individual issues based on root cause
     const onuDown = nvrWithIssues.filter(

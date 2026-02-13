@@ -3,6 +3,7 @@ import { NVRStatus } from "../types/nvr";
 const BASE_URL = import.meta.env.VITE_API_URL || import.meta.env.VITE_API_FALLBACK_URL || 'http://localhost:3001';
 
 interface APIResponse {
+  
   success: boolean;
   data?: NVRStatus[];
   count?: number;

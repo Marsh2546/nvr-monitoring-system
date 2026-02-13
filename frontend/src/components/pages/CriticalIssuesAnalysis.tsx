@@ -55,7 +55,7 @@ import {
   ChevronsRight,
   Info,
 } from "lucide-react";
-import { fetchNVRStatusHistory } from "../../services/nvrHistoryService";
+import { fetchNVRStatusHistory } from "../../services/postgresqlService";
 import { NVRStatus } from "../../types/nvr";
 
 interface CriticalIssue {
@@ -311,6 +311,12 @@ const CriticalIssuesAnalysis: React.FC<{ className?: string }> = ({
 
         // Set initial page items (top 10)
         setCriticalIssues(allIssues.slice(0, itemsPerPage));
+        
+        console.log("🔍 Critical Issues Analysis:", {
+          totalIssues: allIssues.length,
+          timeRange,
+          sampleIssue: allIssues[0]
+        });
       } catch (error) {
         console.error("Error analyzing critical issues:", error);
       } finally {
@@ -344,15 +350,17 @@ const CriticalIssuesAnalysis: React.FC<{ className?: string }> = ({
 
   // Prepare chart data
   const chartData = useMemo(() => {
-    return criticalIssues.map((issue) => ({
-      name:
-        issue.nvrName.length > 15
-          ? issue.nvrName.substring(0, 15) + "..."
-          : issue.nvrName,
-      occurrences: issue.occurrences,
-      percentageChange: issue.percentageChange,
-      issueType: issue.issueType,
-    }));
+    return criticalIssues
+      .filter((issue) => issue && issue.nvrName) // Filter out undefined/null
+      .map((issue) => ({
+        name:
+          issue.nvrName.length > 15
+            ? issue.nvrName.substring(0, 15) + "..."
+            : issue.nvrName,
+        occurrences: issue.occurrences,
+        percentageChange: issue.percentageChange,
+        issueType: issue.issueType,
+      }));
   }, [criticalIssues]);
 
   // Color definitions for issue types

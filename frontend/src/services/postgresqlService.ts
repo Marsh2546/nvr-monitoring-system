@@ -1,11 +1,9 @@
 import { NVRStatus } from "../types/nvr";
 
-// API base URL - use relative URL for Nginx proxy, fallback for development
+// API base URL - use Vite environment variables
 const API_BASE_URL =
   import.meta.env?.VITE_API_URL ||
   import.meta.env?.VITE_API_FALLBACK_URL ||
-  process.env.NEXT_PUBLIC_API_URL ||
-  process.env.REACT_APP_API_URL ||
   "http://localhost:3001";
 
 console.log("🔍 API_BASE_URL:", API_BASE_URL);
@@ -139,16 +137,16 @@ export async function fetchNVRStatusHistory(
     // Transform the data to match NVRStatus interface
     const transformedData: NVRStatus[] = statusHistory.map((record: any) => ({
       id: record.nvr_id || record.id?.toString() || "",
-      nvr: record.nvr_name,
+      nvr: record.nvr_name || record.nvr || "",  // ใช้ทั้ง nvr_name และ nvr
       district: record.district,
       location: record.location,
       onu_ip: record.onu_ip || "",
-      ping_onu: record.ping_onu,
+      ping_onu: record.ping_onu === true || record.ping_onu === "true",
       nvr_ip: record.nvr_ip,
-      ping_nvr: record.ping_nvr,
-      hdd_status: record.hdd_status,
-      normal_view: record.normal_view,
-      check_login: record.check_login,
+      ping_nvr: record.ping_nvr === true || record.ping_nvr === "true",
+      hdd_status: record.hdd_status === true || record.hdd_status === "true",
+      normal_view: record.normal_view === true || record.normal_view === "true",
+      check_login: record.check_login === true || record.check_login === "true",
       camera_count: record.camera_count || 0,
       date_updated: record.recorded_at,
     }));

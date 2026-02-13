@@ -35,7 +35,7 @@ services:
       DB_NAME: cctv_nvr_monitor
       DB_USER: postgres
       DB_PASSWORD: password
-      FRONTEND_URL: http://localhost:3000
+      FRONTEND_URL: http://localhost:5173
     ports:
       - "3001:3001"
     volumes:

@@ -2,7 +2,7 @@ import { Pool } from "pg";
 
 // Database connection pool
 export const pool = new Pool({
-  host: process.env.DB_HOST || "postgres",
+  host: process.env.DB_HOST || "cctv_nvr_monitor",
   port: parseInt(process.env.DB_PORT || "5432"),
   database: process.env.DB_NAME || "cctv_nvr_monitor",
   user: process.env.DB_USER || "postgres",
@@ -156,7 +156,7 @@ export async function fetchNVRStatusHistory(
 ): Promise<NVRStatusHistory[]> {
   try {
     let queryText = `
-      SELECT DISTINCT ON (nvr_id)
+      SELECT 
         id,
         nvr_id,
         nvr_name,
@@ -189,7 +189,8 @@ export async function fetchNVRStatusHistory(
       params.push(endDate);
     }
 
-    queryText += ` ORDER BY nvr_id, recorded_at DESC`;
+    // Remove DISTINCT ON to get all records, not just latest per NVR
+    queryText += ` ORDER BY recorded_at DESC`;
 
     if (limit) {
       queryText += ` LIMIT $${paramIndex}`;

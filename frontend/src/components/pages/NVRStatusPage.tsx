@@ -4,7 +4,7 @@ import {
   fetchNVRStatusHistory,
   fetchNVRSnapshots,
   NVRSnapshot,
-} from "../../services/nvrHistoryService";
+} from "../../services/postgresqlService";
 import { Card, CardContent } from "../ui/card";
 import { Badge } from "../ui/badge";
 import { Input } from "../ui/input";
@@ -133,7 +133,7 @@ export function NVRStatusPage({ nvrList, onPageChange }: NVRStatusPageProps) {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
 
   const today = new Date();
-  const [selectedDate, setSelectedDate] = useState<Date>(new Date()); // 28/1/2026
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date("2026-02-12")); // เปลี่ยนเป็นวันที่มีข้อมูล
   const formatThaiDate = (date: Date) => {
     const thaiDays = [
       "อาทิตย์",
@@ -198,6 +198,7 @@ export function NVRStatusPage({ nvrList, onPageChange }: NVRStatusPageProps) {
         const endISO = endDate.toISOString();
 
         const data = await fetchNVRStatusHistory(startISO, endISO);
+        console.log("🔍 NVRStatusPage chart data:", data.length);
 
         // Group by date and calculate stats
         const dateStats = new Map<
@@ -278,18 +279,19 @@ export function NVRStatusPage({ nvrList, onPageChange }: NVRStatusPageProps) {
       try {
         // Create date range for entire day in UTC to match database timezone
         const now = new Date(selectedDate);
-        const utcDate = new Date(
-          now.getTime() + now.getTimezoneOffset() * 60000,
-        );
+        
+        // แก้ timezone issue - ใช้ local time แทน UTC
         const startOfDay = new Date(
-          utcDate.getFullYear(),
-          utcDate.getMonth(),
-          utcDate.getDate(),
+          now.getFullYear(),
+          now.getMonth(),
+          now.getDate(),
+          0, 0, 0, 0
         );
         const endOfDay = new Date(
-          utcDate.getFullYear(),
-          utcDate.getMonth(),
-          utcDate.getDate() + 1,
+          now.getFullYear(),
+          now.getMonth(),
+          now.getDate(),
+          23, 59, 59, 999
         );
 
         // Convert to ISO strings for PostgreSQL query
@@ -300,10 +302,23 @@ export function NVRStatusPage({ nvrList, onPageChange }: NVRStatusPageProps) {
           selectedDate: selectedDate.toDateString(),
           startDate,
           endDate,
+          timezone: "Local Time"
         });
 
         const data = await fetchNVRStatusHistory(startDate, endDate);
-        setPostgresData(data);
+        console.log("🔍 NVRStatusPage received data:", data.length);
+        
+        // Debug: ตรวจสอบข้อมูลตัวอย่าง
+        if (data.length > 0) {
+          console.log("🔍 Sample NVR data:", data[0]);
+          console.log("🔍 Sample NVR keys:", Object.keys(data[0]));
+        }
+        
+        // Filter out invalid data
+        const validData = data.filter(nvr => nvr && nvr.id && nvr.nvr);
+        console.log("🔍 NVRStatusPage valid data:", validData.length);
+        
+        setPostgresData(validData);
       } catch (error) {
         console.error("Error fetching PostgreSQL data:", error);
         setPostgresError("Failed to fetch data from PostgreSQL");
@@ -317,7 +332,11 @@ export function NVRStatusPage({ nvrList, onPageChange }: NVRStatusPageProps) {
 
   // Get unique districts from PostgreSQL data
   const districts = Array.from(
-    new Set(postgresData.map((nvr) => nvr.district)),
+    new Set(
+      postgresData
+        .filter((nvr) => nvr && nvr.district) // Add null check
+        .map((nvr) => nvr.district)
+    ),
   ).sort();
 
   // Toggle row expansion
@@ -406,6 +425,11 @@ export function NVRStatusPage({ nvrList, onPageChange }: NVRStatusPageProps) {
   // Filter NVR list from PostgreSQL data
   const filteredNVRList = sortItems(
     postgresData.filter((nvr) => {
+      // Add null checks
+      if (!nvr || !nvr.nvr || !nvr.location || !nvr.district) {
+        return false;
+      }
+      
       const matchesSearch =
         nvr.nvr.toLowerCase().includes(searchTerm.toLowerCase()) ||
         nvr.location.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -434,12 +458,12 @@ export function NVRStatusPage({ nvrList, onPageChange }: NVRStatusPageProps) {
 
   // Calculate summary stats for the cards
   const summaryStats = {
-    total: postgresData.length,
-    healthy: postgresData.filter((nvr) => !hasIssues(nvr)).length,
-    attention: postgresData.filter(
+    total: filteredNVRList.length,
+    healthy: filteredNVRList.filter((nvr) => !hasIssues(nvr)).length,
+    attention: filteredNVRList.filter(
       (nvr) => hasAttentionIssues(nvr) && !hasCriticalIssues(nvr),
     ).length,
-    critical: postgresData.filter((nvr) => hasCriticalIssues(nvr)).length,
+    critical: filteredNVRList.filter((nvr) => hasCriticalIssues(nvr)).length,
   };
 
   // Pagination calculations
