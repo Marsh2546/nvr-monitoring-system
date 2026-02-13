@@ -207,6 +207,38 @@ export async function fetchAllNVRHistory(): Promise<NVRStatusHistory[]> {
   }
 }
 
+export async function fetchCurrentNVRStatus(): Promise<NVRStatus[]> {
+  try {
+    console.log("Fetching current NVR status");
+    
+    // Get current status from the latest records
+    const response = await apiCall<any[]>("/api/nvr-status/current");
+    
+    // Transform the data to match NVRStatus interface
+    const transformedData: NVRStatus[] = response.map((record: any) => ({
+      id: record.nvr_id || record.id?.toString() || "",
+      nvr: record.nvr_name || record.nvr || "",
+      district: record.district,
+      location: record.location,
+      onu_ip: record.onu_ip || "",
+      ping_onu: record.ping_onu === true || record.ping_onu === "true",
+      nvr_ip: record.nvr_ip,
+      ping_nvr: record.ping_nvr === true || record.ping_nvr === "true",
+      hdd_status: record.hdd_status === true || record.hdd_status === "true",
+      normal_view: record.normal_view === true || record.normal_view === "true",
+      check_login: record.check_login === true || record.check_login === "true",
+      camera_count: record.camera_count || 0,
+      date_updated: record.recorded_at,
+    }));
+
+    console.log(`Found ${transformedData.length} current NVR status records`);
+    return transformedData;
+  } catch (error) {
+    console.error("Error fetching current NVR status:", error);
+    return [];
+  }
+}
+
 export async function fetchAvailableDates(): Promise<string[]> {
   try {
     // Get unique dates from snapshot history

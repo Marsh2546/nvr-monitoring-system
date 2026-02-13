@@ -19,6 +19,7 @@ import {
   fetchSnapshotLogs,
   fetchNVRStatusHistory,
   fetchAllNVRHistory,
+  fetchCurrentNVRStatus,
   query,
   testDatabaseConnection,
 } from "./databaseService";
@@ -101,6 +102,35 @@ app.get("/api/nvr-status", async (req, res) => {
       success: false,
       error: "Failed to fetch NVR status",
     });
+  }
+});
+
+// Get current NVR status
+app.get("/api/nvr-status/current", async (req, res) => {
+  try {
+    const currentStatus = await fetchCurrentNVRStatus();
+    
+    // Transform to match frontend format
+    const transformedData = currentStatus.map((item) => ({
+      id: item.nvr_id?.toString() || "",
+      nvr: item.nvr_name,
+      district: item.district,
+      location: item.location,
+      onu_ip: item.onu_ip,
+      ping_onu: item.ping_onu,
+      nvr_ip: item.nvr_ip,
+      ping_nvr: item.ping_nvr,
+      hdd_status: item.hdd_status,
+      normal_view: item.normal_view,
+      check_login: item.check_login,
+      camera_count: item.camera_count || 0,
+      date_updated: item.recorded_at,
+    }));
+
+    res.json(transformedData);
+  } catch (error) {
+    console.error("Error fetching current NVR status:", error);
+    res.status(500).json({ error: "Failed to fetch current NVR status" });
   }
 });
 

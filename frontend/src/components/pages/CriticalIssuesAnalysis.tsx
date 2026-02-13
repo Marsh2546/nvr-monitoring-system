@@ -55,7 +55,7 @@ import {
   ChevronsRight,
   Info,
 } from "lucide-react";
-import { fetchNVRStatusHistory } from "../../services/postgresqlService";
+import { fetchNVRStatusHistory, fetchCurrentNVRStatus } from "../../services/postgresqlService";
 import { NVRStatus } from "../../types/nvr";
 
 interface CriticalIssue {
@@ -200,25 +200,28 @@ const CriticalIssuesAnalysis: React.FC<{ className?: string }> = ({
     const analyzeCriticalIssues = async () => {
       setIsLoading(true);
       try {
-        const endDate = new Date();
+        // Always fetch all historical data (from 2020)
         const startDate = new Date();
+        const endDate = new Date();
+        startDate.setFullYear(2020, 0, 1); // January 1, 2020
 
-        if (timeRange === "3days") {
-          startDate.setDate(endDate.getDate() - 3);
-        } else if (timeRange === "7days") {
-          startDate.setDate(endDate.getDate() - 7);
-        } else {
-          // For "all" time, set a very early date
-          startDate.setFullYear(2020, 0, 1); // January 1, 2020
-        }
+        // Fetch both historical data and current status
+        const [historyData, currentStatusData] = await Promise.all([
+          fetchNVRStatusHistory(
+            startDate.toISOString().split("T")[0],
+            endDate.toISOString().split("T")[0],
+            10000 // Limit to 10,000 records
+          ),
+          fetchCurrentNVRStatus()
+        ]);
 
-        const historyData = await fetchNVRStatusHistory(
-          startDate.toISOString().split("T")[0],
-          endDate.toISOString().split("T")[0],
-          timeRange === "all" ? 10000 : undefined // Limit to 10,000 records for All Time
-        );
+        // Create a map of current NVR status for quick lookup
+        const currentStatusMap = new Map<string, NVRStatus>();
+        currentStatusData.forEach(nvr => {
+          currentStatusMap.set(nvr.id, nvr);
+        });
 
-        // Group issues by NVR and issue type
+        // Group issues by NVR and issue type with offline duration tracking
         const issueMap = new Map<
           string,
           {
@@ -230,10 +233,18 @@ const CriticalIssuesAnalysis: React.FC<{ className?: string }> = ({
             occurrences: number;
             dates: string[];
             lastSeen: string;
+            offlineStartDate: string | null;
+            offlineEndDate: string | null;
+            totalOfflineDays: number;
           }
         >();
 
-        historyData.forEach((nvr) => {
+        // Sort history data by date to properly track offline periods
+        const sortedHistoryData = [...historyData].sort((a, b) => 
+          new Date(a.date_updated).getTime() - new Date(b.date_updated).getTime()
+        );
+
+        sortedHistoryData.forEach((nvr) => {
           if (hasCriticalIssues(nvr)) {
             const issueType = getIssueStatus(nvr);
             const key = `${nvr.id}-${issueType}`;
@@ -248,6 +259,9 @@ const CriticalIssuesAnalysis: React.FC<{ className?: string }> = ({
                 occurrences: 0,
                 dates: [],
                 lastSeen: nvr.date_updated,
+                offlineStartDate: null,
+                offlineEndDate: null,
+                totalOfflineDays: 0,
               });
             }
 
@@ -255,9 +269,46 @@ const CriticalIssuesAnalysis: React.FC<{ className?: string }> = ({
             issue.occurrences++;
             issue.dates.push(nvr.date_updated);
 
+            // Track offline periods
+            if (issue.offlineStartDate === null) {
+              // Start of offline period
+              issue.offlineStartDate = nvr.date_updated;
+            }
+            issue.offlineEndDate = nvr.date_updated;
+
             if (new Date(nvr.date_updated) > new Date(issue.lastSeen)) {
               issue.lastSeen = nvr.date_updated;
             }
+          } else {
+            // Check if this NVR was previously offline and is now online
+            const issueTypes = ["ONU", "NVR", "HDD", "VIEW", "LOGIN"];
+            issueTypes.forEach(type => {
+              const key = `${nvr.id}-${type}`;
+              if (issueMap.has(key)) {
+                const issue = issueMap.get(key)!;
+                if (issue.offlineStartDate && issue.offlineEndDate) {
+                  // Calculate offline duration for this period
+                  const startDate = new Date(issue.offlineStartDate);
+                  const endDate = new Date(issue.offlineEndDate);
+                  const daysDiff = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+                  issue.totalOfflineDays += daysDiff;
+                  
+                  // Reset for next offline period
+                  issue.offlineStartDate = null;
+                  issue.offlineEndDate = null;
+                }
+              }
+            });
+          }
+        });
+
+        // Calculate remaining offline periods for issues still offline
+        issueMap.forEach((issue) => {
+          if (issue.offlineStartDate && issue.offlineEndDate) {
+            const startDate = new Date(issue.offlineStartDate);
+            const endDate = new Date(issue.offlineEndDate);
+            const daysDiff = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+            issue.totalOfflineDays += daysDiff;
           }
         });
 
@@ -266,11 +317,30 @@ const CriticalIssuesAnalysis: React.FC<{ className?: string }> = ({
           .map((issue) => {
             const issueInfo = getIssueInfo(issue.issueType);
 
-            // Calculate unique days from dates array
-            const uniqueDays = new Set(issue.dates.map(date => date.split('T')[0]));
-            const actualDays = uniqueDays.size;
+            // Use total offline days instead of unique days
+            const actualDays = issue.totalOfflineDays;
 
-            // For All Time mode, only show issues that occurred more than 7 days
+            // Check if NVR is currently online for this specific issue type
+            const currentNVRStatus = currentStatusMap.get(issue.nvrId);
+            let isCurrentlyOnline = false;
+            
+            if (currentNVRStatus) {
+              const currentIssueType = getIssueStatus(currentNVRStatus);
+              isCurrentlyOnline = currentIssueType !== issue.issueType;
+            }
+
+            // Skip if NVR is currently online for this issue type
+            if (isCurrentlyOnline) {
+              return null;
+            }
+
+            // Filter based on timeRange (3-7 days)
+            if (timeRange === "3days" && actualDays < 3) {
+              return null;
+            }
+            if (timeRange === "7days" && (actualDays < 3 || actualDays > 7)) {
+              return null;
+            }
             if (timeRange === "all" && actualDays <= 7) {
               return null;
             }
@@ -290,7 +360,7 @@ const CriticalIssuesAnalysis: React.FC<{ className?: string }> = ({
               issueType: issue.issueType,
               issueIcon: issueInfo.icon,
               occurrences: issue.occurrences,
-              days: timeRange === "3days" ? 3 : timeRange === "7days" ? 7 : actualDays,
+              days: actualDays, // Use actual offline days
               percentageChange,
               trend,
               lastSeen: issue.lastSeen,
@@ -422,9 +492,8 @@ const CriticalIssuesAnalysis: React.FC<{ className?: string }> = ({
               Critical Issues Analysis
             </CardTitle>
             <p className="text-sm text-slate-500 mt-1">
-              ปัญหาระดับ critical ที่เกิดซ้ำในช่วง{" "}
-              {timeRange === "3days" ? "3" : timeRange === "7days" ? "7" : "ทั้งหมด"}
-              {timeRange === "all" ? "" : "วัน"}
+              ปัญหาที่ยัง offline อยู่
+              {timeRange === "3days" ? " 3 วันขึ้นไป" : timeRange === "7days" ? " 3-7 วัน" : " มากกว่า 7 วัน"}
               {allCriticalIssues.length > 0 && (
                 <span className="text-blue-400 ml-2">
                   (ทั้งหมด {allCriticalIssues.length} รายการ)

@@ -204,6 +204,35 @@ export async function fetchNVRStatusHistory(
   }
 }
 
+export async function fetchCurrentNVRStatus(): Promise<NVRStatusHistory[]> {
+  try {
+    // Get the latest record for each NVR
+    return query<NVRStatusHistory>(`
+      SELECT DISTINCT ON (nvr_id)
+        id,
+        nvr_id,
+        nvr_name,
+        district,
+        location,
+        onu_ip,
+        ping_onu,
+        nvr_ip,
+        ping_nvr,
+        hdd_status,
+        normal_view,
+        check_login,
+        camera_count,
+        recorded_at,
+        source
+      FROM nvr_status_history
+      ORDER BY nvr_id, recorded_at DESC
+    `);
+  } catch (error) {
+    console.error("Error fetching current NVR status:", error);
+    throw error;
+  }
+}
+
 export async function fetchAllNVRHistory(): Promise<NVRStatusHistory[]> {
   try {
     // Query directly from nvr_status_history for actual history
