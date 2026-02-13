@@ -156,7 +156,7 @@ export async function fetchNVRStatusHistory(
 ): Promise<NVRStatusHistory[]> {
   try {
     let queryText = `
-      SELECT 
+      SELECT DISTINCT ON (nvr_id)
         id,
         nvr_id,
         nvr_name,
@@ -170,7 +170,8 @@ export async function fetchNVRStatusHistory(
         normal_view,
         check_login,
         camera_count,
-        recorded_at
+        recorded_at,
+        source
       FROM nvr_status_history
       WHERE 1=1
     `;
@@ -188,7 +189,7 @@ export async function fetchNVRStatusHistory(
       params.push(endDate);
     }
 
-    queryText += ` ORDER BY recorded_at DESC`;
+    queryText += ` ORDER BY nvr_id, recorded_at DESC`;
 
     if (limit) {
       queryText += ` LIMIT $${paramIndex}`;

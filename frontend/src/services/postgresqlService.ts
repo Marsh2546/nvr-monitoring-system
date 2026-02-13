@@ -124,18 +124,21 @@ export async function fetchNVRStatusHistory(
   try {
     console.log("Fetching NVR status history between:", { startDate, endDate, limit });
 
-    // Build endpoint with optional limit
-    let endpoint = `/api/snapshots?startDate=${encodeURIComponent(startDate)}&endDate=${encodeURIComponent(endDate)}`;
+    // Build endpoint for NVR status history
+    let endpoint = `/api/nvr-status?startDate=${encodeURIComponent(startDate)}&endDate=${encodeURIComponent(endDate)}`;
     if (limit) {
       endpoint += `&limit=${limit}`;
     }
 
-    // Fetch NVR status history data from the new table
-    const statusHistory = await apiCall<any[]>(endpoint);
+    // Fetch NVR status history data
+    const response = await apiCall<any>(endpoint);
+    
+    // Handle different response formats
+    const statusHistory = response.data || response;
 
     // Transform the data to match NVRStatus interface
-    const transformedData: NVRStatus[] = statusHistory.map((record) => ({
-      id: record.nvr_id || record.id.toString(),
+    const transformedData: NVRStatus[] = statusHistory.map((record: any) => ({
+      id: record.nvr_id || record.id?.toString() || "",
       nvr: record.nvr_name,
       district: record.district,
       location: record.location,

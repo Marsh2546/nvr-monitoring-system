@@ -9,13 +9,11 @@
 -- \i external-nvr-stations.sql
 -- \i backend/database/init/data-sql/nvr_snapshot_history.sql
 
--- Example: Import NVR snapshot history from external file
--- \i backend/database/init/data-sql/nvr_snapshot_history.sql
+-- Import NVR snapshot history from external file
+\i /docker-entrypoint-initdb.d/data-sql/nvr_snapshot_history.sql
 
--- Method 4: Import from backup SQL dump
--- If you have a complete SQL dump file, you can restore it
--- \i backend/database/init/data-sql/nvr_snapshot_history.sql
--- \i backend/database/init/data-sql/nvr_status_history.sql
+-- Import NVR status history from external file  
+\i /docker-entrypoint-initdb.d/data-sql/nvr_status_history.sql
 
 -- Notes:
 -- 1. Place your external files in the same directory as this script

@@ -10,8 +10,7 @@
 -- 5. Can make HTTP requests to external NVR APIs
 --
 -- Node Cron implementation is located in:
-// backend/src/services/snapshotService.js
-//
+-- backend/src/services/snapshotService.js
 -- Example cron schedule:
 -- */5 * * * * - Every 5 minutes for snapshot capture
 -- 0 */1 * * * - Every hour for NVR status check

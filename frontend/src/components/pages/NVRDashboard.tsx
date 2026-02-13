@@ -71,11 +71,11 @@ export function NVRDashboard({ onPageChange }: NVRDashboardProps) {
         setLoading(true);
         setError(null);
 
-        // Get today's date range in UTC to match database timezone
+        // Get latest date range (fetch most recent data)
         const now = new Date();
-        const utcDate = new Date(now.getTime() + (now.getTimezoneOffset() * 60000));
-        const startDate = new Date(utcDate.getFullYear(), utcDate.getMonth(), utcDate.getDate());
-        const endDate = new Date(utcDate.getFullYear(), utcDate.getMonth(), utcDate.getDate() + 1);
+        // Go back 7 days to ensure we get the latest data
+        const startDate = new Date(now.getTime() - (7 * 24 * 60 * 60 * 1000));
+        const endDate = new Date(now.getTime() + (24 * 60 * 60 * 1000)); // Add 1 day buffer
 
         const dataPromise = fetchNVRStatusHistory(
           startDate.toISOString(),
@@ -123,8 +123,25 @@ export function NVRDashboard({ onPageChange }: NVRDashboardProps) {
   const nvrWithIssues = useMemo(
     () =>
       nvrList.map((nvr): NVRWithIssues => {
-        const issueStatus = getIssueStatus(nvr);
-        const status = calculateEffectiveStatus(nvr);
+        // Add null checks for all required fields
+        const safeNvr = {
+          id: nvr?.id || "",
+          nvr: nvr?.nvr || "",
+          district: nvr?.district || "",
+          location: nvr?.location || "",
+          onu_ip: nvr?.onu_ip || "",
+          ping_onu: nvr?.ping_onu || false,
+          nvr_ip: nvr?.nvr_ip || "",
+          ping_nvr: nvr?.ping_nvr || false,
+          hdd_status: nvr?.hdd_status || false,
+          normal_view: nvr?.normal_view || false,
+          check_login: nvr?.check_login || false,
+          camera_count: nvr?.camera_count || 0,
+          date_updated: nvr?.date_updated || "",
+        };
+
+        const issueStatus = getIssueStatus(safeNvr);
+        const status = calculateEffectiveStatus(safeNvr);
         const issues: string[] = [];
 
         // Add issues based on hierarchy
@@ -135,12 +152,12 @@ export function NVRDashboard({ onPageChange }: NVRDashboardProps) {
         if (issueStatus === "login") issues.push("Login Failure");
 
         return {
-          ...nvr,
-          hasIssues: hasIssues(nvr),
+          ...safeNvr,
+          hasIssues: hasIssues(safeNvr),
           issueCount: issues.length,
           issues: issues,
-          hasCriticalIssues: hasCriticalIssues(nvr),
-          hasAttentionIssues: hasAttentionIssues(nvr),
+          hasCriticalIssues: hasCriticalIssues(safeNvr),
+          hasAttentionIssues: hasAttentionIssues(safeNvr),
         };
       }),
     [nvrList],
@@ -238,8 +255,10 @@ export function NVRDashboard({ onPageChange }: NVRDashboardProps) {
 
     const districtData = nvrWithIssues.reduce(
       (acc, nvr) => {
+        // Add null check for district
+        const district = nvr.district || "Unknown";
         const existing = acc.find(
-          (item: any) => item.district === nvr.district,
+          (item: any) => item.district === district,
         );
         if (existing) {
           existing.total += 1;
@@ -252,7 +271,7 @@ export function NVRDashboard({ onPageChange }: NVRDashboardProps) {
           }
         } else {
           acc.push({
-            district: nvr.district,
+            district: district,
             total: 1,
             normal: nvr.hasIssues ? 0 : 1,
             critical: nvr.hasCriticalIssues ? 1 : 0,
